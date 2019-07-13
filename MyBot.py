@@ -82,5 +82,56 @@ class AgentTwo(CaptureAgent):
         CaptureAgent.registerInitialState(self, gameState)
     
     def chooseAction(self, gameState: GameState) -> str:
+        capMultiplier = 3
+
+        if self.red:
+            capsules = gameState.getRedCapsules()
+        else:
+            capsules = gameState.getBlueCapsules()
+
+        foodList = list(self.getFood(gameState))
         actions = gameState.getLegalActions(self.index)
+                
+        meanX = 0
+        meanY = 0
+        
+        for i in range(len(foodList)):
+            meanX = meanX + foodList[i][0]
+            meanY = meanY + foodList[i][1]
+
+        for cap in capsules:
+            meanX = capMultiplier* meanX + cap[0]
+            meanY = capMultiplier* meanY + cap[1]
+
+        meanX = int(meanX/len(foodList))
+        meanY = int(meanY/len(foodList))
+
+        myState = gameState.getAgentState(self.index)
+        myPos = myState.getPosition()
+
+        curDistance = abs(myPos[0] - meanX) + abs(myPos[1] - meanY)
+
+
+        '''if meanX > myPos[0]:
+            if actions.__contains__('East'):
+                return 'East'
+        if meanX <= myPos[0]
+            if actions.__contains__('West'):
+                return 'West'
+        if meanY > myPos[1]:
+            if actions.__contains__('East'):
+                return 'East'
+        if meanY <= myPos[1]
+            if actions.__contains__('West'):
+                return 'West'
+        '''
+
+
+        for action in actions:
+            gameState.generateSuccessor(self.index, action)
+            newPos = myState.getPosition()
+            dist = abs(newPos[0] - meanX) + abs(newPos[1] - meanY)
+            if dist < curDistance:
+                return action
+
         return random.choice(actions)
