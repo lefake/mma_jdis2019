@@ -30,13 +30,13 @@ def createTeam(firstIndex, secondIndex, isRed):
     """
 
     # The following line is an example only; feel free to change it.
-    return [AgentOne(firstIndex), AgentTwo(secondIndex)]
+    return [OffensiveAgent(firstIndex), DefensiveAgent(secondIndex)]
 
 ##########
 # Agents #
 ##########
 
-class AgentOne(CaptureAgent):
+class OffensiveAgent(CaptureAgent):
     """
     A Dummy agent to serve as an example of the necessary agent structure.
     You should look at baselineTeam.py for more details about how to
@@ -77,7 +77,7 @@ class AgentOne(CaptureAgent):
         return random.choice(actions)
 
 
-class AgentTwo(CaptureAgent):
+class DefensiveAgent(CaptureAgent):
     def registerInitialState(self, gameState: GameState):
         CaptureAgent.registerInitialState(self, gameState)
     
