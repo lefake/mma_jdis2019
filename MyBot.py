@@ -115,6 +115,19 @@ class AgentOne(CaptureAgent):
         return bestA
 
 class AgentTwo(CaptureAgent):
+    def findReturnPos(self):
+        if self.red:
+            posX = 16
+            posY = 8
+            while self.game.hasWall(posX, posY):
+                posY = (posY + 1)%18
+        else:
+            posX = 18
+            posY = 8
+            while self.game.hasWall(posX, posY):
+                posY = (posY + 1)%18
+        return (posX, posY)
+
     def initFoodDefList(self):
         tempFood = []
         numrows = len(list(self.getFoodYouAreDefending(self.game)))   
@@ -131,43 +144,45 @@ class AgentTwo(CaptureAgent):
         CaptureAgent.registerInitialState(self, gameState)
         self.game = gameState
         self.initFoodDefList()
+        self.indexEnemies = self.getOpponents(gameState)
     
     def chooseAction(self, gameState: GameState) -> str:
-        capMultiplier = 2
-
-        if self.red:
-            capsules = gameState.getRedCapsules()
-        else:
-            capsules = gameState.getBlueCapsules()
-
-        foodList = list(self.getFood(gameState))
         actions = gameState.getLegalActions(self.index)
         if "FREEZE" in actions != -1: actions.remove("FREEZE")
-        if "Stop" in actions: actions.remove("Stop")
         
-        meanX = 0
-        meanY = 0
+        enemie1 = gameState.getAgentPosition(self.indexEnemies[0]) 
+        enemie2 = gameState.getAgentPosition(self.indexEnemies[1])
+
+        if enemie1[0] > enemie2[0]:
+            if self.red:
+                posX = enemie2[0]
+                posY = enemie2[1]
+            else:
+                posX = enemie1[0]
+                posY = enemie1[1]
+        else:
+            if self.red:
+                posX = enemie1[0]
+                posY = enemie1[1]
+            else:
+                posX = enemie2[0]
+                posY = enemie2[1]
         
-        for i in range(len(self.foodDefList)):
-            meanX = meanX + self.foodDefList[i][0]
-            meanY = meanY + self.foodDefList[i][1]
-
-        for cap in capsules:
-            meanX = capMultiplier* meanX + cap[0]
-            meanY = capMultiplier* meanY + cap[1]
-
-        meanX = int(meanX/len(foodList))
-        meanY = int(meanY/len(foodList))
-
+        if self.red:
+            if posX > 16:
+                posX = 16
+        else:
+            if posX < 17:
+                posX = 17
+        
         myState = gameState.getAgentState(self.index)
         myPos = myState.getPosition()
-
-        curDistance = abs(myPos[0] - meanX) + abs(myPos[1] - meanY)
+        curDistance = abs(myPos[0] - posX) + abs(myPos[1] - posY)
 
         for action in actions:
             gameState.generateSuccessor(self.index, action)
             newPos = myState.getPosition()
-            dist = abs(newPos[0] - meanX) + abs(newPos[1] - meanY)
+            dist = abs(newPos[0] - posX) + abs(newPos[1] - posY)
             if dist < curDistance:
                 return action
 
