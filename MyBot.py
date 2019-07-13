@@ -63,7 +63,10 @@ class OffensiveAgent(CaptureAgent):
         CaptureAgent.registerInitialState in captureAgents.py.
         '''
         CaptureAgent.registerInitialState(self, gameState)
-
+        self.game = gameState
+        print(self.game)
+        print(self.getLegalActions)
+        
         '''
         Your initialization code goes here, if you need any.
         '''
@@ -72,6 +75,12 @@ class OffensiveAgent(CaptureAgent):
         """
         Picks among legal actions randomly.
         """
+        if self.red:
+            action = chooseRedAction(self)
+        else:
+            action = chooseBlueAction(self)
+        
+            
         actions = gameState.getLegalActions(self.index)
 
         return random.choice(actions)
