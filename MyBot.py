@@ -51,31 +51,63 @@ class AgentOne(CaptureAgent):
     def registerInitialState(self, gameState: GameState):
         CaptureAgent.registerInitialState(self, gameState)
         self.game = gameState
-        self.initFoodList()
+        self.legalPositions = [p for p in gameState.getWalls().asList(False) if p[1] > 1]
+        self.hasEaten = False
+
+    def findReturnPos(self):
+        if self.red:
+            posX = 16
+            posY = 8
+            while self.game.hasWall(posX, posY):
+                posY = (posY + 1)%18
+        else:
+            posX = 18
+            posY = 8
+            while self.game.hasWall(posX, posY):
+                posY = (posY + 1)%18
+        return (posX, posY)
 
     def chooseAction(self, gameState: GameState) -> str:
+        self.initFoodList()
         actions = gameState.getLegalActions(self.index)
         if "FREEZE" in actions != -1: actions.remove("FREEZE")
-        if "Stop" in actions: actions.remove("Stop")
-        if "Jump_East" in actions: actions.remove("Jump_East")
-        if "Jump_West" in actions: actions.remove("Jump_West")
-        if "Jump_West" in actions: actions.remove("Jump_West")
-        if "Jump_North" in actions: actions.remove("Jump_North")
-        if "Jump_South" in actions: actions.remove("Jump_South")
+        if "Stop" in actions: actions.remove("Stop")        
+
+        foodList = list(self.getFood(self.game))
         
         myState = gameState.getAgentState(self.index)
         myPos = myState.getPosition()
+        actions = gameState.getLegalActions(self.index)
 
-        closest = self.foodList[0]
-
-        for food in self.foodList:
-            if self.getMazeDistance(myPos, food) < self.getMazeDistance(myPos, closest):
-                closest = food
-
+        self.initFoodList()
+        if myPos == self.findReturnPos():
+          self.hasEaten = False
         
-        
-        return random.choice(actions)
+        if self.hasEaten:
+          pos = self.findReturnPos()
+        else:
+          for food in self.foodList:
+            if gameState.hasFood(food[0], food[1]):
+              pos = food
+          
+        bestA = actions[0]
+        i = gameState.getRedTeamIndices()[0]
+        dist = self.getMazeDistance(pos, myPos)
+        minDist = dist
+        bestA = actions[0]
+        for action in actions:
+              
+          succ = gameState.generateSuccessor(self.index, action)
+          myPosSucc = succ.getAgentPosition(self.index)
+          succDist = self.getMazeDistance(pos, myPosSucc)
+          if dist > succDist and action != "FREEZE" and action != "Stop":
+            minDist = succDist
+            bestA = action
 
+        if minDist == 0:
+          self.hasEaten = True
+
+        return bestA
 
 class AgentTwo(CaptureAgent):
     def initFoodDefList(self):
@@ -107,11 +139,6 @@ class AgentTwo(CaptureAgent):
         actions = gameState.getLegalActions(self.index)
         if "FREEZE" in actions != -1: actions.remove("FREEZE")
         if "Stop" in actions: actions.remove("Stop")
-        if "Jump_East" in actions: actions.remove("Jump_East")
-        if "Jump_West" in actions: actions.remove("Jump_West")
-        if "Jump_West" in actions: actions.remove("Jump_West")
-        if "Jump_North" in actions: actions.remove("Jump_North")
-        if "Jump_South" in actions: actions.remove("Jump_South")
         
         meanX = 0
         meanY = 0
