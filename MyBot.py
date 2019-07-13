@@ -42,7 +42,20 @@ class OffensiveAgent(CaptureAgent):
     You should look at baselineTeam.py for more details about how to
     create an agent as this is the bare minimum.
     """
-
+    
+    def initFoodList(self):
+        tempFood = []
+        numrows = len(list(self.getFood(self.game)))   
+        numcols = len(list(self.getFood(self.game)[0]))
+        
+        self.foodList = []
+        for i in range(numrows):
+            for j in range(numcols):
+                if self.getFood(self.game)[i][j]:
+                    self.foodList.append((i, j))
+                    
+        print(self.foodList)
+    
     def registerInitialState(self, gameState: GameState):
         """
         This method handles the initial setup of the
@@ -66,6 +79,35 @@ class OffensiveAgent(CaptureAgent):
         self.game = gameState
         print(self.game.getLegalActions(self.index))
 
+        self.initFoodList()
+        
+        myState = gameState.getAgentState(self.index)
+        myPos = myState.getPosition()
+        actions = gameState.getLegalActions(self.index)
+        
+        minDistance = 99999
+        index = None
+        
+        
+        
+        for i in range(len(self.foodList)):
+           foodX = self.foodList[i][0]
+           foodY = self.foodList[i][1]
+           distance = abs(myPos[0] - foodX) + abs(myPos[1] - foodY)
+           if distance < minDistance:
+              minDistance = distance
+              index = i
+        
+        self.path = []
+        self.path = self.aStarSearch(gameState, foodX, foodY)
+        
+        self.food = 0
+        
+        self.game = gameState
+        myState = gameState.getAgentState(self.index)
+        pos = myState.getPosition()
+        
+        self.initialPos = pos
         
         '''
         Your initialization code goes here, if you need any.
@@ -75,36 +117,153 @@ class OffensiveAgent(CaptureAgent):
         """
         Picks among legal actions randomly.
         """
+
+            
         
-        foodList = list(self.getFood(self.game))
+        if len(self.path) == 0:
+            if len(list(self.getFood(self.game))) <= 5:
+              #self.breadthSearchWithPos(gameState, self.initialPos) 
+              bob = 1+1
+            else:
+                self.breadthSearch(gameState) 
+
+        
+        
+        
+        return self.path.pop(0)
+            
+
+    
+    def aStarSearch(self, gameState, foodx, foody):
+        """Search the node that has the lowest combined cost and heuristic first."""
+        from pacman.util import manhattanDistance
+        
+        #Declare both nodes
         
         myState = gameState.getAgentState(self.index)
         myPos = myState.getPosition()
-        actions = gameState.getLegalActions(self.index)
         
-        minDistance = 99999
-        index = None
+        position = (foodx,foody)
         
-        for i in range(len(foodList)):
-           foodX = foodList[i][0]
-           foodY = foodList[i][1]
-           distance = abs(myPos[0] - foodX) + abs(myPos[1] - foodY)
-           if distance < minDistance:
-              minDistance = distance
-              index = i
-        
-   
-        for action in actions:
-            gameState.generateSuccessor(self.index, action)
-            newPos = myState.getPosition()
-            foodX = foodList[index][0]
-            foodY = foodList[index][1]
-            dist = abs(newPos[0] - foodX) + abs(newPos[1] - foodY)
-            if dist < minDistance:
-                return action
-           
-        return action
+        firstNode = (gameState, [], 0) 
+        secondNode= (gameState, [], 0) 
 
+
+        openList = []
+        closedList = []
+
+        openList.append(firstNode)
+        while True:
+            if not openList:
+                return []
+            
+            openList.sort(key=lambda x: x[2] + manhattanDistance(x[0].getAgentPosition(self.index), position))
+            firstNode = openList.pop(0)
+            closedList.append(firstNode)
+            if firstNode[0].getAgentPosition(self.index) == position:
+                print (firstNode[1])
+                return firstNode[1]
+            else:
+                print (firstNode[1] , position)
+            successors = []    
+            
+            for action in firstNode[0].getLegalActions(self.index) :
+                if action.find("Jump") == -1 and action.find("FREEZE") == -1:
+                    successors.append((gameState.generateSuccessor(self.index, action), action, 1))
+
+            for x in successors:
+                path = firstNode[1]
+                path.append(x[1])
+                secondNode = (x[0], path , x[2] + firstNode[2])
+                
+                #ClosedList
+                mappedClosedList = list(map(lambda x: x[0].getAgentPosition(self.index), closedList))
+                mappedOpenList = list(map(lambda x: x[0].getAgentPosition(self.index), openList))
+                if secondNode[0].getAgentPosition(self.index) in mappedClosedList:
+                    indexElement = mappedClosedList.index(secondNode[0].getAgentPosition(self.index))
+                    if secondNode[2] < closedList[indexElement][2]: 
+                        closedList.pop(indexElement)
+                        openList.append(secondNode)
+
+                #OpenList
+                elif secondNode[0].getAgentPosition(self.index) in mappedOpenList:
+                    indexElement = mappedOpenList.index(secondNode[0].getAgentPosition(self.index))
+                    if secondNode[2] < openList[indexElement][2] :
+                        openList.pop(indexElement)
+                        openList.append(secondNode)
+
+                #Neither
+                else :
+                    openList.append(secondNode)
+
+        return []
+
+    
+    def breadthSearch(self, gameState):
+        
+        openList = [(gameState, [], 0, 0, [])]
+        while not len(openList) == 0:
+            openList.sort(key=lambda x: x[2])
+            state = openList.pop(0)
+            actions = state[0].getLegalActions(self.index)
+            for action in actions :
+                newGameState = gameState.generateSuccessor(self.index, action)
+                myState = newGameState.getAgentState(self.index)
+                newPos = myState.getPosition()
+                
+                if newPos in state[1]:
+                    break
+
+                newPath = state[1]
+                newPath.append(action)
+                newCost = state[2] + 1
+                
+                if self.red:
+                    if newGameState.getBlueFood()[int(newPos[0])][int(newPos[1])]:
+                        return newPath
+                else:
+                    if newGameState.getRedFood()[int(newPos[0])][int(newPos[1])]:
+                        return newPath
+                     
+                    
+                if action.find("skip") != -1:
+                    if state[3] > 0:
+                        break
+                    openList.append((newGameState, newPath, newCost, 4, state[1]))
+                else:
+
+                    newCost += 5
+                    openList.append((newGameState, newPath, newCost, state[3]-1, state[1]))
+            
+    def breadthSearchWithPos(self, gameState, goalPos):
+        
+        openList = (gameState, [], 0)
+        while not len(openList) == 0:
+            state = openList.pop(0)
+            actions = state[0].getLegalActions(self.index)
+            for action in actions :
+                newGameState = gameState.generateSuccessor(self.index, action)
+                myState = newGameState.getAgentState(self.index)
+                newPos = myState.getPosition()
+
+
+                newPath = state[1]
+                newPath.append(action)
+                newCost = state[2] + 1
+                
+                if newPos == goalPos:
+                   return newPath
+                   
+                if action.find("skip") != -1:
+                    openList.append((newGameState, newPath, newCost))
+                else:
+                    newCost += 5
+                    openList.append((newGameState, newPath, newCost))
+            
+                   
+        
+        
+        
 class DefensiveAgent(CaptureAgent):
     def registerInitialState(self, gameState: GameState):
         CaptureAgent.registerInitialState(self, gameState)
