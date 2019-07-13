@@ -64,8 +64,8 @@ class OffensiveAgent(CaptureAgent):
         '''
         CaptureAgent.registerInitialState(self, gameState)
         self.game = gameState
-        print(self.game)
-        print(self.getLegalActions)
+        print(self.game.getLegalActions(self.index))
+
         
         '''
         Your initialization code goes here, if you need any.
@@ -75,16 +75,35 @@ class OffensiveAgent(CaptureAgent):
         """
         Picks among legal actions randomly.
         """
-        if self.red:
-            action = chooseRedAction(self)
-        else:
-            action = chooseBlueAction(self)
         
-            
+        foodList = list(self.getFood(self.game))
+        
+        myState = gameState.getAgentState(self.index)
+        myPos = myState.getPosition()
         actions = gameState.getLegalActions(self.index)
-
-        return random.choice(actions)
-
+        
+        minDistance = 99999
+        index = None
+        
+        for i in range(len(foodList)):
+           foodX = foodList[i][0]
+           foodY = foodList[i][1]
+           distance = abs(myPos[0] - foodX) + abs(myPos[1] - foodY)
+           if distance < minDistance:
+              minDistance = distance
+              index = i
+        
+   
+        for action in actions:
+            gameState.generateSuccessor(self.index, action)
+            newPos = myState.getPosition()
+            foodX = foodList[index][0]
+            foodY = foodList[index][1]
+            dist = abs(newPos[0] - foodX) + abs(newPos[1] - foodY)
+            if dist < minDistance:
+                return action
+           
+        return action
 
 class DefensiveAgent(CaptureAgent):
     def registerInitialState(self, gameState: GameState):

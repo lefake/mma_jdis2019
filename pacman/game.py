@@ -193,6 +193,7 @@ class AgentState:
 
     def getDirection(self):
         return self.configuration.getDirection()
+    
 
 class Grid:
     """
