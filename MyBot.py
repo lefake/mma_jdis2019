@@ -64,46 +64,87 @@ class OffensiveAgent(CaptureAgent):
         '''
         CaptureAgent.registerInitialState(self, gameState)
         self.game = gameState
-        print(self.game.getLegalActions(self.index))
+        self.legalPositions = [p for p in gameState.getWalls().asList(False) if p[1] > 1]
 
-        
+        self.eaten = 0
+        self.initFoodList(gameState.getInitialAgentPosition(self.index), gameState)
+
         '''
         Your initialization code goes here, if you need any.
         '''
+
+    def initFoodList(self, position, gameState):
+        from pacman.util import manhattanDistance
+        tempFood = []
+        numrows = len(list(self.getFood(gameState)))
+        numcols = len(list(self.getFood(gameState)[0]))
+
+        self.foodList = []
+        for i in range(numrows):
+            for j in range(numcols):
+                if gameState.hasFood(i, j) and self.getFood(gameState)[i][j]:
+                    self.foodList.append((i, j))
+
+        self.foodList.sort(key=lambda x: manhattanDistance(x, position))
+        return self.foodList
+
+    def findReturnPos(self):
+        if self.red:
+            posX = 16
+            posY = 8
+            while self.game.hasWall(posX, posY):
+                posY = (posY + 1)%18
+        else:
+            posX = 18
+            posY = 8
+            while self.game.hasWall(posX, posY):
+                posY = (posY + 1)%18
+        return (posX, posY)
 
     def chooseAction(self, gameState: GameState) -> str:
         """
         Picks among legal actions randomly.
         """
-        
         foodList = list(self.getFood(self.game))
         
         myState = gameState.getAgentState(self.index)
         myPos = myState.getPosition()
         actions = gameState.getLegalActions(self.index)
+
+        if myPos == self.findReturnPos():
+          self.eaten = 0
+          self.initFoodList(myPos, gameState)
         
-        minDistance = 99999
-        index = None
-        
-        for i in range(len(foodList)):
-           foodX = foodList[i][0]
-           foodY = foodList[i][1]
-           distance = abs(myPos[0] - foodX) + abs(myPos[1] - foodY)
-           if distance < minDistance:
-              minDistance = distance
-              index = i
-        
-   
+        if self.eaten > 4:
+          pos = self.findReturnPos()
+        else:
+          pos = self.findReturnPos()
+          for food in self.foodList:
+            if gameState.hasFood(food[0], food[1]):
+              pos = food
+          
+        bestA = actions[0]
+        i = gameState.getRedTeamIndices()[0]
+        dist = self.getMazeDistance(pos, myPos)
+        minDist = dist
+        bestA = actions[0]
         for action in actions:
-            gameState.generateSuccessor(self.index, action)
-            newPos = myState.getPosition()
-            foodX = foodList[index][0]
-            foodY = foodList[index][1]
-            dist = abs(newPos[0] - foodX) + abs(newPos[1] - foodY)
-            if dist < minDistance:
-                return action
-           
-        return action
+              
+          succ = gameState.generateSuccessor(self.index, action)
+          myPosSucc = succ.getAgentPosition(self.index)
+          succDist = self.getMazeDistance(pos, myPosSucc)
+          if dist > succDist and action != "Jump_East" and action != "Jump_West" and action != "Jump_North" and action != "Jump_South":
+            minDist = succDist
+            bestA = action
+          elif dist > succDist + 2:
+            minDist = succDist
+            bestA = action
+
+        if minDist == 0:
+          self.initFoodList(myPos, gameState)
+          self.eaten += 1
+
+        return bestA
 
 class DefensiveAgent(CaptureAgent):
     def registerInitialState(self, gameState: GameState):
